@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentinel | Live Agent Trust Registry</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #080c12;
+            --surface: #0d1320;
+            --surface-2: #111827;
+            --border: #1e2d45;
+            --border-bright: #2a4060;
+            --text: #c8d8e8;
+            --text-dim: #6080a0;
+            --blue: #3b82f6;
+            --blue-glow: rgba(59, 130, 246, .25);
+            --purple: #8b5cf6;
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --cyan: #06b6d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Scanline overlay ─────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 20, 40, .04) 2px, rgba(0, 20, 40, .04) 4px);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* ── Header ──────────────────────────────────────── */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 28px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(13, 19, 32, .95) 0%, rgba(8, 12, 18, .95) 100%);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 20px var(--blue-glow);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px var(--blue-glow);
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(139, 92, 246, .4);
+            }
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #fff;
+        }
+
+        .sub {
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            border: 1px solid;
+        }
+
+        .badge-blue {
+            background: rgba(59, 130, 246, .1);
+            color: var(--blue);
+            border-color: rgba(59, 130, 246, .35);
+        }
+
+        .badge-green {
+            background: rgba(34, 197, 94, .1);
+            color: var(--green);
+            border-color: rgba(34, 197, 94, .35);
+        }
+
+        .badge-yellow {
+            background: rgba(234, 179, 8, .1);
+            color: var(--yellow);
+            border-color: rgba(234, 179, 8, .35);
+        }
+
+        .badge-red {
+            background: rgba(239, 68, 68, .1);
+            color: var(--red);
+            border-color: rgba(239, 68, 68, .35);
+        }
+
+        .badge-purple {
+            background: rgba(139, 92, 246, .1);
+            color: var(--purple);
+            border-color: rgba(139, 92, 246, .35);
+        }
+
+        #mode-badge {
+            min-width: 150px;
+            text-align: center;
+        }
+
+        #monitoring-badge {
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .btn {
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all .2s;
+            letter-spacing: .5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            color: #fff;
+            box-shadow: 0 0 18px var(--blue-glow);
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ── Status bar ──────────────────────────────────── */
+        #status-bar {
+            padding: 8px 28px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #run-id-display {
+            color: var(--cyan);
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-live {
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+            animation: blink 1.2s ease-in-out infinite;
+        }
+
+        .dot-idle {
+            background: var(--text-dim);
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .3;
+            }
+        }
+
+        /* ── Layout ──────────────────────────────────────── */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            height: calc(100vh - 90px);
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ─────────────────────────────────────── */
+        .sidebar {
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #incident-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        #incident-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #incident-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #incident-list::-webkit-scrollbar-thumb {
+            background: var(--border-bright);
+            border-radius: 2px;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-dim);
+            padding: 60px 20px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .empty-state .icon {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        /* ── Incident Card ───────────────────────────────── */
+        .incident-card {
+            padding: 12px 14px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all .2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .incident-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+        }
+
+        .incident-card:hover {
+            border-color: var(--border-bright);
+            transform: translateX(2px);
+        }
+
+        .incident-card.selected {
+            border-color: var(--blue);
+            background: rgba(59, 130, 246, .06);
+        }
+
+        .card-critical::before {
+            background: var(--red);
+        }
+
+        .card-high::before {
+            background: var(--red);
+            opacity: .7;
+        }
+
+        .card-suspicious::before {
+            background: var(--yellow);
+        }
+
+        .card-normal::before {
+            background: var(--green);
+        }
+
+        .card-pending::before {
+            background: var(--text-dim);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+
+        .card-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .card-snippet {
+            font-size: 11px;
+            color: var(--text-dim);
+            line-height: 1.5;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ── Agent Step Pipeline ─────────────────────────── */
+        .pipeline {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .step {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            position: relative;
+            transition: background .5s;
+        }
+
+        .step.running {
+            background: var(--blue);
+            animation: step-pulse .8s ease-in-out infinite;
+        }
+
+        .step.complete {
+            background: var(--green);
+        }
+
+        .step.error {
+            background: var(--red);
+        }
+
+        .step.skipped {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed var(--border);
+        }
+
+        @keyframes step-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .4;
+            }
+        }
+
+        .step-labels {
+            display: flex;
+            gap: 4px;
+            font-size: 9px;
+            color: var(--text-dim);
+            margin-top: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .step-labels span {
+            flex: 1;
+            text-align: center;
+        }
+
+        /* ── Main Content ────────────────────────────────── */
+        .content {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .content-header h2 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .attest-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── Metrics Row ─────────────────────────────────── */
+        .metrics-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric-cell {
+            padding: 14px 20px;
+            border-right: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .metric-cell:last-child {
+            border-right: none;
+        }
+
+        .metric-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── Report Pane ─────────────────────────────────── */
+        #report-pane {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 32px;
+        }
+
+        #report-pane::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        #report-pane::-webkit-scrollbar-thumb {
+            background: var(--border-bright);
+            border-radius: 2px;
+        }
+
+        /* ── Markdown styles ─────────────────────────────── */
+        .md h1 {
+            color: #fff;
+            font-size: 20px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .md h2 {
+            color: var(--blue);
+            font-size: 15px;
+            margin: 18px 0 8px;
+        }
+
+        .md h3 {
+            color: var(--purple);
+            font-size: 13px;
+            margin: 14px 0 6px;
+        }
+
+        .md p {
+            color: var(--text);
+            line-height: 1.8;
+            margin-bottom: 10px;
+        }
+
+        .md ul {
+            margin-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .md li {
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .md strong {
+            color: #fff;
+        }
+
+        .md code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--surface-2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--cyan);
+            font-size: 12px;
+        }
+
+        .md pre {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            overflow-x: auto;
+            margin: 12px 0;
+        }
+
+        .md pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .md a {
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        .md a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Agent detail trace ──────────────────────────── */
+        .trace-panel {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .trace-title {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        .trace-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .trace-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            position: relative;
+        }
+
+        .trace-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: -10px;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .trace-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            background: var(--surface);
+            z-index: 1;
+        }
+
+        .trace-icon.done {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .trace-icon.running {
+            border-color: var(--blue);
+            color: var(--blue);
+            animation: blink 1s infinite;
+        }
+
+        .trace-icon.error {
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        .trace-icon.pending {
+            border-color: var(--border);
+            color: var(--text-dim);
+        }
+
+        .trace-body {
+            padding: 2px 0 16px;
+        }
+
+        .trace-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .trace-detail {
+            font-size: 11px;
+            color: var(--text-dim);
+            margin-top: 3px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* ── No-selection placeholder ────────────────────── */
+        .placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-dim);
+            gap: 14px;
+            text-align: center;
+        }
+
+        .placeholder-icon {
+            font-size: 48px;
+            opacity: .3;
+        }
+
+        /* ── Loading spinner ─────────────────────────────── */
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid transparent;
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── Header ──────────────────────────────────────────────────────────────── -->
+    <header>
+        <div class="logo">
+            <div class="logo-icon">⬡</div>
+            <div>
+                <div class="h1" style="font-size:20px;font-weight:700;letter-spacing:4px;color:#fff;">SENTINEL</div>
+                <div class="sub">Autonomous Agent Trust & Attestation Layer</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="badge badge-blue">Base Sepolia Testnet</span>
+            <span class="badge" id="system-mode-badge">MODE: …</span>
+            <span class="badge" id="mode-badge">ATTESTATION: …</span>
+            <span class="badge" id="monitoring-badge">MONITORING: OFF</span>
+            <button class="btn btn-primary" id="run-btn" onclick="toggleSimulation()" style="background:var(--surface-2); border:1px solid var(--border); box-shadow:none;">
+                🧪 Run Demo Simulation
+            </button>
+            <button class="btn btn-primary" id="monitor-btn" onclick="toggleMonitoring()">
+                📡 Start Real-Time Monitoring
+            </button>
+        </div>
+    </header>
+
+    <!-- ── Status bar ──────────────────────────────────────────────────────────── -->
+    <div id="status-bar">
+        <span>
+            <span class="dot dot-idle" id="live-dot"></span>
+            <span id="status-text" style="margin-left:8px;">API: checking…</span>
+        </span>
+        <span>Run ID: <span id="run-id-display">—</span></span>
+        <span id="completed-count">Completed: 0 / 0</span>
+    </div>
+
+    <!-- ── Layout ──────────────────────────────────────────────────────────────── -->
+    <div class="main-grid">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                Incident Timeline
+                <span id="count-badge" class="badge badge-blue" style="font-size:10px;">0</span>
+            </div>
+            <div id="incident-list">
+                <div class="empty-state">
+                    <div class="icon">📡</div>
+                    <div>Sentinel is idle.</div>
+                    <div style="margin-top:12px;font-size:11px;color:#3b6080;">Start <strong>Monitoring</strong> for real events or run a <strong>Demo Simulation</strong>.</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main content -->
+        <div class="content">
+
+            <!-- Metrics row -->
+            <div class="metrics-row">
+                <div class="metric-cell">
+                    <div class="metric-label">Events Processed</div>
+                    <div class="metric-value" id="m-total" style="color:#fff;">—</div>
+                </div>
+                <div class="metric-cell">
+                    <div class="metric-label">Critical Threats</div>
+                    <div class="metric-value" id="m-critical" style="color:var(--red);">—</div>
+                </div>
+                <div class="metric-cell">
+                    <div class="metric-label">Attestations</div>
+                    <div class="metric-value" id="m-attest" style="color:var(--green);">—</div>
+                </div>
+                <div class="metric-cell">
+                    <div class="metric-label">Remediations</div>
+                    <div class="metric-value" id="m-remediation" style="color:var(--cyan);">—</div>
+                </div>
+            </div>
+
+            <!-- Content header -->
+            <div class="content-header">
+                <h2 id="report-title">Select an incident →</h2>
+                <div class="attest-badge" id="attest-info" style="display:none;"></div>
+            </div>
+
+            <!-- Report pane -->
+            <div id="report-pane">
+                <div class="placeholder">
+                    <div class="placeholder-icon">🛡️</div>
+                    <div>Select an incident from the timeline to view<br />its live agent execution trace and trust
+                        report.</div>
+                </div>
+            </div>
+
+            <!-- Supervisor Strategy Overlay (Optional) -->
+            <!-- Supervisor/Orchestrator Strategy Overlay -->
+            <div id="supervisor-panel"
+                style="display:none; padding: 20px; border-top: 1px solid var(--border); background: rgba(13, 19, 32, 0.9); border-bottom: 1px solid var(--border);">
+                <div class="trace-title">Orchestrator Autonomous Strategy</div>
+                <div id="supervisor-content"
+                    style="font-family:'JetBrains Mono'; font-size:12px; color:var(--cyan); line-height:1.6;"></div>
+            </div>
+
+            <!-- Explainable Reasoning Trace -->
+            <div id="reasoning-panel" style="display:none; padding: 20px; background: rgba(0,0,0,0.2);">
+                <div class="trace-title">Explainable Reasoning Trace</div>
+                <div id="reasoning-content" style="font-size:11px; color:var(--text-dim); line-height:1.4;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const API = 'http://127.0.0.1:8000';
+        let currentRunId = null;
+        let selectedId = null;
+        let pollTimer = null;
+        let incidentMap = {};
+
+        // ── Helper UI Functions ─────────────────────────────────────────────────────
+        function statusEmoji(status) {
+            if (status === 'complete') return '🛡️';
+            if (status === 'failed') return '❌';
+            return '⏳';
+        }
+
+        function badgeClass(risk) {
+            if (risk === 'Critical') return 'badge-red';
+            if (risk === 'High') return 'badge-purple';
+            if (risk === 'Suspicious' || risk === 'Medium') return 'badge-yellow';
+            return 'badge-blue';
+        }
+
+        function getPriorityClass(prio) {
+            if (prio === 'CRITICAL') return 'badge-red';
+            if (prio === 'HIGH') return 'badge-purple';
+            if (prio === 'MEDIUM') return 'badge-yellow';
+            return 'badge-blue';
+        }
+
+        function sevColor(sev) {
+            if (sev >= 80) return 'var(--red)';
+            if (sev >= 50) return 'var(--yellow)';
+            return 'var(--green)';
+        }
+
+        function modeColor(mode) {
+            return mode === 'REAL' ? 'var(--green)' : 'var(--yellow)';
+        }
+
+        function riskClass(inc) {
+            if (inc.priority === 'CRITICAL' || inc.risk_level === 'Critical') return 'risk-high';
+            if (inc.priority === 'HIGH' || inc.risk_level === 'High') return 'risk-suspicious';
+            return '';
+        }
+
+        function stepState(status) {
+            if (status === 'complete') return 'complete';
+            if (status === 'running') return 'running';
+            if (status === 'skipped') return 'skipped';
+            if (status === 'error' || status === 'failed') return 'error';
+            return 'pending'; // Default to pending
+        }
+
+        function fetchMetrics() {
+            fetch(`${API}/metrics`)
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('m-total').textContent = data.total_incidents || 0;
+                    document.getElementById('m-critical').textContent = data.critical_threats || 0;
+                    document.getElementById('m-attest').textContent = data.attestations_success || 0;
+                    document.getElementById('m-remediation').textContent = data.remediations_triggered || 0;
+                })
+                .catch(e => console.warn("Metrics error", e));
+        }
+
+        function resetMetrics() {
+            ['m-total', 'm-critical', 'm-attest', 'm-remediation'].forEach(id => {
+               const el = document.getElementById(id);
+               if (el) el.textContent = '0';
+            });
+        }
+
+        function updateLocalBadges(currentIncidents) {
+            // Summary logic if needed
+        }
+
+        // ── Health check on load ────────────────────────────────────────────────────
+        async function checkHealth() {
+            try {
+                const res = await fetch(`${API}/health`);
+                if (!res.ok) throw new Error('API offline');
+                const data = await res.json();
+
+                document.getElementById('status-text').textContent = 'API: Online';
+                document.getElementById('live-dot').className = 'dot dot-idle';
+
+                // System mode (Demo vs Live)
+                const sysBadge = document.getElementById('system-mode-badge');
+                if (sysBadge) {
+                    const isDemo = data.mode === 'DEMO';
+                    sysBadge.textContent = `SENTINEL MODE: ${data.mode || 'UNKNOWN'}`;
+                    sysBadge.className = `badge ${isDemo ? 'badge-blue' : 'badge-purple'}`;
+                }
+
+                // Attestation mode (Mock vs Real)
+                const modeBadge = document.getElementById('mode-badge');
+                if (modeBadge) {
+                    if (data.attestation_mode === 'LIVE_ATTESTATION') {
+                        modeBadge.textContent = '🟢 LIVE ATTESTATION';
+                        modeBadge.className = 'badge badge-green';
+                    } else {
+                        modeBadge.textContent = '🟡 MOCK ATTESTATION MODE';
+                        modeBadge.className = 'badge badge-yellow';
+                    }
+                }
+
+                // Disable simulation button if not in demo mode
+                const runBtn = document.getElementById('run-btn');
+                if (runBtn) {
+                    const isDemo = (data.mode === 'DEMO');
+                    if (!isDemo) {
+                        runBtn.disabled = true;
+                        runBtn.title = "Simulation disabled in LIVE mode. Use /ingest-event API.";
+                    } else {
+                        runBtn.disabled = (pollTimer !== null);
+                        runBtn.title = "";
+                    }
+                }
+
+                // Poll real system metrics and start global polling
+                fetchMetrics();
+                if (!pollTimer) {
+                    pollTimer = setInterval(pollIncidents, 3000);
+                    pollIncidents();
+                }
+            } catch (e) {
+                console.error("Health check failed", e);
+                document.getElementById('status-text').textContent = 'API: Offline — start api/main.py';
+                const mb = document.getElementById('mode-badge');
+                if (mb) {
+                    mb.textContent = '⚠ API OFFLINE';
+                    mb.className = 'badge badge-red';
+                }
+            }
+        }
+
+        // ── Start simulation ────────────────────────────────────────────────────────
+        async function startSimulation() {
+            const btn = document.getElementById('run-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Starting…';
+
+            // Clear local state
+            incidentMap = {};
+            selectedId = null;
+            document.getElementById('incident-list').innerHTML = '';
+            document.getElementById('report-pane').innerHTML = `
+      <div class="placeholder"><div class="placeholder-icon">⚙️</div>
+      <div>Simulation started. Agents are processing events…</div></div>`;
+            document.getElementById('attest-info').style.display = 'none';
+            document.getElementById('report-title').textContent = 'Processing…';
+            resetMetrics();
+
+            try {
+                const res = await fetch(`${API}/simulation/start`, { method: 'POST' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                currentRunId = data.run_id;
+                document.getElementById('run-id-display').textContent = currentRunId.slice(0, 8) + '…';
+                document.getElementById('live-dot').className = 'dot dot-live';
+                document.getElementById('status-text').textContent = 'API: Live — agents running';
+
+                btn.innerHTML = '⟳ Simulating…';
+
+                // Start polling
+                if (pollTimer) clearInterval(pollTimer);
+                pollTimer = setInterval(pollIncidents, 2000);
+                pollIncidents(); // immediate first call
+
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerHTML = '▶ Run Live Simulation';
+                alert(`Failed to start simulation:\n${e.message}\n\nMake sure the API is running: python api/main.py`);
+            }
+        }
+
+        // ── Poll /incidents ─────────────────────────────────────────────────────────
+        async function pollIncidents() {
+            // if (!currentRunId) return; // REMOVED: Support global polling
+            try {
+                const res = await fetch(`${API}/incidents`);
+                if (!res.ok) return;
+                const all = await res.json();
+
+                // Filter to current run if active, otherwise show everything
+                const current = currentRunId ? all.filter(i => i.run_id === currentRunId) : all;
+
+                current.forEach(inc => {
+                    incidentMap[inc.incident_id] = inc;
+                    if (document.getElementById(`card-${inc.incident_id}`)) {
+                        updateCard(inc);
+                    } else {
+                        addCard(inc);
+                    }
+                    // If this is the selected incident, refresh the detail pane
+                    if (selectedId === inc.incident_id) {
+                        refreshDetailPane(inc);
+                    }
+                });
+
+                // Re-render if selected incident now has a report
+                if (selectedId && incidentMap[selectedId]) {
+                    const sel = incidentMap[selectedId];
+                    if (sel.status === 'complete' && sel.report_status === 'complete') {
+                        loadReport(selectedId);
+                    }
+                }
+
+                updateLocalBadges(current); // Only update side badges
+                fetchMetrics(); // Update main global HUD
+
+            } catch (e) {
+                console.warn('Poll error:', e);
+            }
+        }
+
+        // ── Add a new card ──────────────────────────────────────────────────────────
+        function addCard(inc) {
+            const list = document.getElementById('incident-list');
+            // Remove empty state if present
+            const es = list.querySelector('.empty-state');
+            if (es) es.remove();
+
+            const el = document.createElement('div');
+            el.id = `card-${inc.incident_id}`;
+            el.className = `incident-card ${riskClass(inc)}`;
+            el.onclick = () => selectIncident(inc.incident_id);
+            el.innerHTML = cardHTML(inc);
+            list.appendChild(el);
+            document.getElementById('count-badge').textContent = Object.keys(incidentMap).length;
+        }
+
+        // ── Update existing card ────────────────────────────────────────────────────
+        function updateCard(inc) {
+            const el = document.getElementById(`card-${inc.incident_id}`);
+            if (!el) return;
+            el.className = `incident-card ${riskClass(inc)}${selectedId === inc.incident_id ? ' selected' : ''}`;
+            el.innerHTML = cardHTML(inc);
+            el.onclick = () => selectIncident(inc.incident_id);
+        }
+
+        function cardHTML(inc) {
+            const statusIcon = statusEmoji(inc.status);
+            const risk = inc.risk_level || '…';
+            const sev = inc.severity ? `${inc.severity}/100` : '…';
+            const isFailed = inc.status === 'failed';
+            const steps = [
+                isFailed ? 'error' : stepState(inc.classifier_status),
+                isFailed && inc.investigation_status === 'pending' ? 'error' : stepState(inc.investigation_status),
+                isFailed && (inc.attestation_status === 'pending' || inc.evidence_status === 'pending') ? 'error' : stepState(inc.attestation_status || inc.evidence_status),
+                isFailed && inc.report_status === 'pending' ? 'error' : stepState(inc.report_status),
+            ];
+
+            return `
+      <div class="card-top">
+        <span class="card-id">${inc.incident_id}</span>
+        <span class="badge ${badgeClass(inc.risk_level)}" style="font-size:10px;">${risk}</span>
+      </div>
+        <div class="card-snippet" id="snippet-${inc.incident_id}">${inc.raw_payload.content || inc.event_type}</div>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div class="badge ${getPriorityClass(inc.priority)}">${inc.priority}</div>
+            <div style="font-size:10px; color:var(--text-dim); font-family:'JetBrains Mono'">${inc.status.replace('_', ' ')}</div>
+        </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:10px;color:var(--text-dim);">Severity: <strong style="color:${sevColor(inc.severity)}">${sev}</strong></span>
+        <span>
+            <span style="font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px;background:rgba(255,255,255,0.05);color:var(--text-dim);margin-right:4px;">${(inc.mode || 'demo').toUpperCase()}</span>
+            <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:${modeColor(inc.attestation_mode)}">${inc.attestation_mode || 'PENDING'}</span>
+        </span>
+      </div>
+      <div class="pipeline">
+        ${steps.map(s => `<div class="step ${s}"></div>`).join('')}
+      </div>
+      <div class="step-labels">
+        <span>Detect</span><span>Investig.</span><span>Attest</span><span>Report</span>
+      </div>`;
+        }
+
+        // ── Select incident ─────────────────────────────────────────────────────────
+        function selectIncident(id) {
+            if (selectedId) {
+                const prev = document.getElementById(`card-${selectedId}`);
+                if (prev) prev.classList.remove('selected');
+            }
+            selectedId = id;
+            const card = document.getElementById(`card-${id}`);
+            if (card) card.classList.add('selected');
+
+            const inc = incidentMap[id];
+            if (!inc) return;
+
+            refreshDetailPane(inc);
+            if (inc.report_status === 'complete') {
+                loadReport(id);
+            }
+        }
+
+        // ── Render detail pane (trace + placeholder or report) ─────────────────────
+        function refreshDetailPane(inc) {
+            document.getElementById('report-title').textContent =
+                `Incident ${inc.incident_id} — ${inc.risk_level || 'Processing'}`;
+
+            // Attestation badge
+            const ai = document.getElementById('attest-info');
+            ai.style.display = 'flex';
+            if (inc.attestation_mode === 'REAL') {
+                const tx = inc.transaction_hash || '…';
+                ai.innerHTML = `
+        <span class="badge badge-green">🟢 ON-CHAIN VERIFIED</span>
+        <a href="https://sepolia.basescan.org/tx/${tx}" target="_blank"
+           style="font-size:11px;color:var(--blue);font-family:'JetBrains Mono',monospace;"
+           title="${tx}">TX: ${tx.slice(0, 18)}…</a>`;
+            } else if (inc.attestation_mode === 'MOCK') {
+                ai.innerHTML = `<span class="badge badge-yellow">🟡 MOCK ATTESTATION — blockchain keys not configured</span>`;
+            } else {
+                ai.innerHTML = `<span class="badge" style="color:var(--text-dim);border-color:var(--border);">⏳ Awaiting attestation…</span>`;
+            }
+
+            // If report is complete, loadReport() will replace pane content
+            if (inc.report_status !== 'complete') {
+                renderTrace(inc);
+            }
+
+            // Supervisor/Orchestrator Strategy UI
+            const superPanel = document.getElementById('supervisor-panel');
+            const superContent = document.getElementById('supervisor-content');
+            const decision = inc.orchestrator_decision || inc.supervisor_decision;
+
+            if (decision) {
+                superPanel.style.display = 'block';
+                superContent.innerHTML = `
+                    <div style="margin-bottom:8px;"><span style="color:var(--text-dim)">Priority:</span> <span class="badge ${getPriorityClass(decision.priority)}">${decision.priority}</span></div>
+                    <div style="margin-bottom:8px;"><span style="color:var(--text-dim)">Strategy:</span> <span style="color:#fff">${decision.actions.join(' ➔ ')}</span></div>
+                    <div style="margin-bottom:8px;"><span style="color:var(--text-dim)">Intelligence Tools:</span> <span style="color:var(--yellow)">${decision.tools.join(', ')}</span></div>
+                    <div style="margin-bottom:8px;"><span style="color:var(--text-dim)">Remediation:</span> <span style="color:var(--red)">${decision.mitigation.length ? decision.mitigation.join(', ') : 'None'}</span></div>
+                    <div style="border-left:2px solid var(--border-bright); padding-left:10px; margin-top:10px; font-style:italic;">
+                        "${decision.reasoning}"
+                    </div>
+                `;
+            } else {
+                superPanel.style.display = 'none';
+            }
+
+            // Reasoning Trace UI
+            const reasonPanel = document.getElementById('reasoning-panel');
+            const reasonContent = document.getElementById('reasoning-content');
+            if (inc.reasoning_trace && Object.keys(inc.reasoning_trace).length > 0) {
+                reasonPanel.style.display = 'block';
+                reasonContent.innerHTML = Object.entries(inc.reasoning_trace).map(([agent, text]) => `
+                    <div style="margin-bottom:10px;">
+                        <strong style="color:var(--cyan); text-transform:uppercase; font-size:10px;">${agent} reasoning:</strong><br/>
+                        ${text}
+                    </div>
+                `).join('');
+            } else {
+                reasonPanel.style.display = 'none';
+            }
+        }
+
+        // ── Render agent trace ──────────────────────────────────────────────────────
+        function renderTrace(inc) {
+            const pane = document.getElementById('report-pane');
+            pane.innerHTML = `
+      <div class="trace-panel">
+        <div class="trace-title">Agent Execution Trace</div>
+        <div class="trace-steps">
+          ${traceStep('🔍', 'Detection Agent', inc.classifier_status,
+                inc.rule_triggered ? `Rule: ${inc.rule_triggered}` :
+                    inc.classifier_status === 'running' ? 'Analyzing event stream…' : 'Pending')}
+          ${traceStep('🕵️', 'Investigation Agent', inc.investigation_status,
+                        inc.risk_level ? `Risk level: ${inc.risk_level} | Tools invoked` :
+                            inc.investigation_status === 'running' ? 'Invoking IP/Wallet tools…' : 'Pending')}
+          ${traceStep('⛓️', 'Attestation Agent', inc.attestation_status,
+                                inc.transaction_hash ? `TX: ${inc.transaction_hash.slice(0, 24)}…` :
+                                    inc.attestation_status === 'running' ? 'Submitting to Base Sepolia…' :
+                                        inc.attestation_mode === 'MOCK' ? 'Mock — no blockchain keys configured' : 'Pending')}
+          ${traceStep('📄', 'Reporting Agent', inc.report_status,
+                                            inc.report_status === 'running' ? 'Generating markdown report…' :
+                                                inc.report_status === 'complete' ? 'Report generated ✓' : 'Pending')}
+        </div>
+        ${inc.intel ? `
+            <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+                <div class="trace-title" style="font-size:10px;">Threat Intelligence Enrichment</div>
+                <div style="font-size:11px; color:var(--yellow); font-family:'JetBrains Mono'; background:rgba(255,193,7,0.05); padding:10px; border-radius:4px;">
+                    ${inc.intel.indicators.map(ind => `[${ind}]`).join(' ')}<br/>
+                    ${JSON.stringify(inc.intel.external_data, null, 2)}
+                </div>
+            </div>
+        ` : ''}
+      </div>
+      ${inc.status === 'failed' ? `<div class="badge badge-red" style="margin-top:12px;">❌ Pipeline Error: ${(inc.errors || []).join('; ')}</div>` : ''}
+      ${inc.report_status !== 'complete' ? `<div style="color:var(--text-dim);text-align:center;margin-top:40px;">
+        <span class="spinner"></span> &nbsp;Report will appear here once all agents complete…</div>` : ''}
+    `;
+        }
+
+        function traceStep(icon, name, status, detail) {
+            const cls = stepState(status);
+            const displayIcon = cls === 'complete' ? '✓' : cls === 'running' ? '⟳' : cls === 'error' ? '✕' : '○';
+            return `
+      <div class="trace-step">
+        <div class="trace-icon ${cls}">${displayIcon}</div>
+        <div class="trace-body">
+          <div class="trace-name">${icon} ${name}</div>
+          <div class="trace-detail">${detail}</div>
+        </div>
+      </div>`;
+        }
+
+        // ── Load and render markdown report ────────────────────────────────────────
+        let _lastLoadedReport = null;
+        async function loadReport(id) {
+            if (_lastLoadedReport === id) return; // avoid re-fetching if already loaded
+            const inc = incidentMap[id];
+            if (!inc || inc.report_status !== 'complete') return;
+
+            try {
+                const res = await fetch(`${API}/incidents/${id}/report`);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (data.error) {
+                    renderTrace(inc);
+                    return;
+                }
+
+                _lastLoadedReport = id;
+                const pane = document.getElementById('report-pane');
+
+                // Trace at top, then report
+                pane.innerHTML = `
+        <div class="trace-panel" style="margin-bottom:20px;">
+          <div class="trace-title">Agent Execution Trace — Complete</div>
+          <div class="trace-steps">
+            ${traceStep('🔍', 'Detection Agent', 'complete', `Rule: ${inc.rule_triggered || '—'} | Severity: ${inc.severity || '—'}/100`)}
+            ${traceStep('🕵️', 'Investigation Agent', 'complete', `Risk: ${inc.risk_level || '—'} | Evidence gathered`)}
+            ${traceStep('⛓️', 'Attestation Agent', inc.attestation_mode === 'MOCK' ? 'complete' : 'complete',
+                    inc.attestation_mode === 'REAL'
+                        ? `TX: ${(inc.transaction_hash || '').slice(0, 32)}…`
+                        : 'Mock — no blockchain keys configured')}
+            ${traceStep('📄', 'Reporting Agent', 'complete', 'Markdown report generated')}
+          </div>
+        </div>
+        <div class="md">${marked.parse(data.report)}</div>`;
+            } catch (e) {
+                console.warn('Report fetch error:', e);
+            }
+        }
+
+        // ── Monitoring ─────────────────────────────────────────────────────────────
+        async function toggleMonitoring() {
+            const btn = document.getElementById('monitor-btn');
+            const isRunning = btn.textContent.includes('Stop');
+            
+            try {
+                const endpoint = isRunning ? '/monitoring/stop' : '/monitoring/start';
+                const res = await fetch(`${API}${endpoint}`, { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.status === 'started' || data.status === 'already_running') {
+                    btn.textContent = '⏹ Stop Monitoring';
+                    btn.className = 'btn btn-primary badge-red';
+                    document.getElementById('monitoring-badge').textContent = '📡 MONITORING: ON';
+                    document.getElementById('monitoring-badge').className = 'badge badge-green';
+                } else {
+                    btn.textContent = '📡 Start Real-Time Monitoring';
+                    btn.className = 'btn btn-primary';
+                    document.getElementById('monitoring-badge').textContent = '📡 MONITORING: OFF';
+                    document.getElementById('monitoring-badge').className = 'badge';
+                }
+            } catch (e) {
+                console.error("Monitoring toggle error", e);
+            }
+        }
+
+        async function updateMonitoringStatus() {
+            try {
+                const res = await fetch(`${API}/monitoring/status`);
+                const data = await res.json();
+                const btn = document.getElementById('monitor-btn');
+                const badge = document.getElementById('monitoring-badge');
+                
+                if (data.running) {
+                    btn.textContent = '⏹ Stop Monitoring';
+                    btn.className = 'btn btn-primary badge-red';
+                    badge.textContent = '📡 MONITORING: ON';
+                    badge.className = 'badge badge-green';
+                } else {
+                    btn.textContent = '📡 Start Real-Time Monitoring';
+                    btn.className = 'btn btn-primary';
+                    badge.textContent = '📡 MONITORING: OFF';
+                    badge.className = 'badge';
+                }
+            } catch {}
+        }
+
+        // ── Simulation (Demo) ──────────────────────────────────────────────────────
+        async function toggleSimulation() {
+            startSimulation(); // Existing startSimulation logic handles the demo trigger
+        }
+
+        // Update startSimulation to use the new demo endpoint
+        async function startSimulation() {
+            const btn = document.getElementById('run-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Starting…';
+
+            incidentMap = {};
+            selectedId = null;
+            document.getElementById('incident-list').innerHTML = '';
+            document.getElementById('report-pane').innerHTML = `
+                <div class="placeholder"><div class="placeholder-icon">🧪</div>
+                <div>Demo Simulation started. Injecting synthetic events…</div></div>`;
+            document.getElementById('attest-info').style.display = 'none';
+            document.getElementById('report-title').textContent = 'Processing Demo…';
+            resetMetrics();
+
+            try {
+                const res = await fetch(`${API}/demo/simulation/start`, { method: 'POST' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                currentRunId = data.run_id;
+                document.getElementById('run-id-display').textContent = 'DEMO-' + currentRunId.slice(0, 4);
+                document.getElementById('live-dot').className = 'dot dot-live';
+
+                btn.innerHTML = '🧪 Simulating…';
+                btn.disabled = false;
+
+                if (pollTimer) clearInterval(pollTimer);
+                pollTimer = setInterval(pollIncidents, 2000);
+                pollIncidents();
+
+            } catch (e) {
+                btn.disabled = false;
+                btn.innerHTML = '🧪 Run Demo Simulation';
+                alert(`Failed to start demo:\n${e.message}`);
+            }
+        }
+
+        // ── Boot ────────────────────────────────────────────────────────────────────
+        checkHealth();
+        updateMonitoringStatus();
+        setInterval(checkHealth, 10000);
+        setInterval(updateMonitoringStatus, 5000);
+    </script>
+</body>
+
+</html>

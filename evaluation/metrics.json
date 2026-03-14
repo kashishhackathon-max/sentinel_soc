@@ -1,0 +1,15 @@
+{
+    "run_id": "9035178c-9cc5-4b5c-a5db-daed767a1f41",
+    "evaluation_count": 10,
+    "complete": 10,
+    "failed": 0,
+    "detection_accuracy": "71.4%",
+    "false_positive_rate": "33.3%",
+    "high_risk_detected": 5,
+    "avg_severity_score": 61.5,
+    "real_attestations": 0,
+    "mock_attestations": 10,
+    "attestation_mode": "MOCK",
+    "avg_time_per_incident_sec": "0.2",
+    "network": "Base Sepolia"
+}

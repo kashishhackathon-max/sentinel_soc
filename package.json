@@ -1,0 +1,15 @@
+{
+  "name": "cybersecurity-soc",
+  "version": "1.0.0",
+  "description": "Sentinel is a production-grade autonomous agent trust infrastructure. It monitors agent event logs, detects suspicious behavior, autonomously investigates threats using specialized tools, and writes tamper-proof incident attestations to the **Base Sepolia Testnet**.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "hardhat": "^3.1.12"
+  }
+}
