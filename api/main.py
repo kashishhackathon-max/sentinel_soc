@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -266,6 +267,11 @@ def get_system_metrics():
 
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
+
+@app.get("/")
+async def root_redirect():
+    """Redirect root access to the dashboard."""
+    return RedirectResponse(url="/dashboard")
 
 @app.get("/health")
 def health():
