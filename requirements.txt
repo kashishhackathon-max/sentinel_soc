@@ -53,7 +53,7 @@ pydantic==2.12.5
 pydantic_core==2.41.5
 python-dotenv==1.2.2
 pyunormalize==17.0.0
-pywin32==311
+
 PyYAML==6.0.3
 regex==2026.2.28
 requests==2.32.5
@@ -73,7 +73,7 @@ uuid_utils==0.14.1
 uvicorn==0.41.0
 web3==7.14.1
 websockets==15.0.1
-win32_setctime==1.2.0
+
 xxhash==3.6.0
 yarl==1.23.0
 zstandard==0.25.0
