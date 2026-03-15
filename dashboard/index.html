@@ -827,7 +827,10 @@
     </div>
 
     <script>
-        const API = 'http://127.0.0.1:8000';
+        // Detect if we are running on Render or locally
+        const API = window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost')
+            ? 'http://127.0.0.1:8000'
+            : window.location.origin;
         let currentRunId = null;
         let selectedId = null;
         let pollTimer = null;
