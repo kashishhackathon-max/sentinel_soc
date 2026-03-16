@@ -100,6 +100,10 @@ def increment_live_events() -> None:
 
 def add_live_incident(incident: dict) -> None:
     global _critical_threats
+    # Normalize ID for dashboard compatibility
+    if "id" in incident and "incident_id" not in incident:
+        incident["incident_id"] = incident["id"]
+    
     with _lock:
         _live_incidents.append(incident)
         if incident.get("severity") == "critical":
@@ -109,10 +113,10 @@ def add_live_incident(incident: dict) -> None:
 def get_live_metrics() -> dict:
     with _lock:
         return {
-            "eventsProcessed": _live_events_processed,
-            "criticalThreats": _critical_threats,
-            "attestations": 0,  # Mocked for now
-            "remediations": 0   # Mocked for now
+            "total_incidents": _live_events_processed,
+            "critical_threats": _critical_threats,
+            "attestations_success": 0,
+            "remediations_triggered": 0
         }
 
 
