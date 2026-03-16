@@ -135,10 +135,26 @@ class RuntimeEvent(BaseModel):
 
 class LiveIncident(BaseModel):
     id: str = Field(description="Unique incident UUID")
+    incident_id: Optional[str] = None # Added for compatibility
     timestamp: str = Field(description="ISO8601 detection timestamp")
     agentId: str = Field(description="ID of the malicious agent")
+    actor: Optional[str] = None # Map from agentId
     type: str = Field(description="Incident type/category")
-    severity: str = Field(description="critical, high, medium, low")
+    event_type: Optional[str] = None # Support UI naming
+    severity: Any = Field(description="Score 0-100 or 'critical'") 
+    priority: str = Field(default="MEDIUM")
+    risk_level: str = Field(default="Processing")
     description: str = Field(description="Human-readable explanation of the threat")
     sourceEventId: str = Field(description="The event ID that triggered this incident")
-    status: str = Field(default="open", description="open, resolved, archived")
+    source: str = Field(default="live-runtime")
+    status: str = Field(default="open")
+    mode: str = Field(default="live")
+    raw_payload: Dict[str, Any] = Field(default_factory=dict)
+    
+    # Status steps for UI
+    classifier_status: str = "complete"
+    investigation_status: str = "pending"
+    evidence_status: str = "pending"
+    attestation_status: str = "pending"
+    report_status: str = "pending"
+    attestation_mode: str = "PENDING"

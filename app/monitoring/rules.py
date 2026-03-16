@@ -59,15 +59,28 @@ def evaluate_event(event: RuntimeEvent) -> Optional[LiveIncident]:
             severity = "high"
 
     if detections:
+        incident_id = str(uuid.uuid4())
         return LiveIncident(
-            id=str(uuid.uuid4()),
+            id=incident_id,
+            incident_id=incident_id, # Double map for compatibility
             timestamp=datetime.now(timezone.utc).isoformat(),
             agentId=event.agentId,
+            actor=event.agentId,
             type=incident_type,
-            severity=severity,
+            event_type=incident_type,
+            severity=severity_score(severity),
+            priority=severity.upper(),
+            risk_level=severity.capitalize(),
             description=" | ".join(detections),
             sourceEventId=event.eventId,
-            status="open"
+            status="open",
+            raw_payload={"content": " | ".join(detections), "event": event.dict()},
+            classifier_status="complete"
         )
     
     return None
+
+def severity_score(sev: str) -> int:
+    """Map string severity to numeric score for UI coloring."""
+    mapping = {"critical": 95, "high": 75, "medium": 50, "low": 25}
+    return mapping.get(sev.lower(), 10)
