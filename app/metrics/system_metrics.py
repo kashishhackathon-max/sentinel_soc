@@ -32,3 +32,13 @@ def update_metric(key: str, increment: int = 1):
 
 def get_metrics():
     return init_metrics()
+
+def save_monitoring_active(active: bool):
+    metrics = init_metrics()
+    metrics["monitoring_active"] = active
+    with open(METRICS_FILE, "w") as f:
+        json.dump(metrics, f)
+
+def get_monitoring_active() -> bool:
+    metrics = init_metrics()
+    return metrics.get("monitoring_active", False)

@@ -81,10 +81,13 @@ def get_all_incidents() -> list:
         return sorted(all_incidents, key=lambda x: x["timestamp"])
 
 
+from app.metrics import system_metrics
+
 def set_monitoring_status(active: bool) -> None:
     global _monitoring_active, _live_incidents, _live_events_processed, _critical_threats
     with _lock:
         _monitoring_active = active
+        system_metrics.save_monitoring_active(active)
         if active:
             # START FRESH for Live monitoring
             _live_incidents = []
@@ -94,6 +97,9 @@ def set_monitoring_status(active: bool) -> None:
 
 def get_monitoring_status() -> bool:
     with _lock:
+        # Check persistence if in-memory is False (e.g. after a restart)
+        if not _monitoring_active:
+            return system_metrics.get_monitoring_active()
         return _monitoring_active
 
 
