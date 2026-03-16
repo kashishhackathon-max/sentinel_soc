@@ -118,3 +118,27 @@ class SentinelIncident(BaseModel):
     # Recommendations & Remediation
     analyst_recommendations: List[str] = []
     remediation_state: str = "none"  # none, suggested, executed, skipped
+
+class RuntimeEvent(BaseModel):
+    eventId: str = Field(description="Unique UUID for this event")
+    timestamp: str = Field(description="ISO8601 timestamp")
+    agentId: str = Field(description="ID of the monitored agent")
+    sessionId: Optional[str] = Field(default=None, description="Current session ID")
+    source: str = Field(description="Source component (e.g., tool-executor)")
+    eventType: str = Field(description="Type: tool_call, file_access, etc.")
+    action: str = Field(description="The specific action performed")
+    resource: Optional[str] = Field(default=None, description="The resource accessed (file path, URL, etc.)")
+    destination: Optional[str] = Field(default=None, description="Target for outbound requests")
+    metadata: Dict[str, Any] = Field(default={}, description="Additional technical metadata")
+    riskSignals: List[str] = Field(default=[], description="Signals identified during preprocessing")
+
+
+class LiveIncident(BaseModel):
+    id: str = Field(description="Unique incident UUID")
+    timestamp: str = Field(description="ISO8601 detection timestamp")
+    agentId: str = Field(description="ID of the malicious agent")
+    type: str = Field(description="Incident type/category")
+    severity: str = Field(description="critical, high, medium, low")
+    description: str = Field(description="Human-readable explanation of the threat")
+    sourceEventId: str = Field(description="The event ID that triggered this incident")
+    status: str = Field(default="open", description="open, resolved, archived")

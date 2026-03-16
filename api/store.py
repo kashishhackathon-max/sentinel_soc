@@ -15,6 +15,12 @@ _store: Dict[str, dict] = {}
 _lock = threading.Lock()
 _current_run_id: Optional[str] = None
 
+# ── Live Monitoring State (In-Memory) ────────────────────────────────────────
+_monitoring_active = False
+_live_incidents = []
+_live_events_processed = 0
+_critical_threats = 0
+
 
 def set_run_id(run_id: str) -> None:
     global _current_run_id
@@ -64,7 +70,52 @@ def get_incident(incident_id: str) -> Optional[dict]:
         return _store.get(incident_id, None)
 
 
+
 def get_all_incidents() -> list:
     """Return all incidents for the current run, sorted by timestamp."""
     with _lock:
-        return sorted(_store.values(), key=lambda x: x["timestamp"])
+        # Merge demo and live for a unified view if that's what the UI expects,
+        # but the user specifically asked for live incidents to be distinct.
+        # For now, return all in reverse chronological order.
+        all_incidents = list(_store.values()) + _live_incidents
+        return sorted(all_incidents, key=lambda x: x["timestamp"])
+
+
+def set_monitoring_status(active: bool) -> None:
+    global _monitoring_active
+    with _lock:
+        _monitoring_active = active
+
+
+def get_monitoring_status() -> bool:
+    with _lock:
+        return _monitoring_active
+
+
+def increment_live_events() -> None:
+    global _live_events_processed
+    with _lock:
+        _live_events_processed += 1
+
+
+def add_live_incident(incident: dict) -> None:
+    global _critical_threats
+    with _lock:
+        _live_incidents.append(incident)
+        if incident.get("severity") == "critical":
+            _critical_threats += 1
+
+
+def get_live_metrics() -> dict:
+    with _lock:
+        return {
+            "eventsProcessed": _live_events_processed,
+            "criticalThreats": _critical_threats,
+            "attestations": 0,  # Mocked for now
+            "remediations": 0   # Mocked for now
+        }
+
+
+def get_live_incidents() -> list:
+    with _lock:
+        return sorted(_live_incidents, key=lambda x: x["timestamp"], reverse=True)

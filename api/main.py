@@ -23,8 +23,10 @@ import threading
 import time
 from typing import List, Optional, Dict, Any
 from api import store
-from api.schemas import SimulationStartResponse, IncidentReportResponse, IngestedEvent, SupervisorDecision
+from api.schemas import SimulationStartResponse, IncidentReportResponse, IngestedEvent, SupervisorDecision, RuntimeEvent
 from app.monitoring.continuous_monitor import ContinuousMonitor
+from app.monitoring.rules import evaluate_event
+import uuid
 
 # ── Sentinel Agents ─────────────────────────────────────────────────────────
 from agents.detection_agent import run_detection
@@ -263,6 +265,8 @@ def run_pipeline(incident_id: str, run_id: str, event_data: str) -> None:
 @app.get("/metrics")
 def get_system_metrics():
     """Returns real-time performance and threat indicators."""
+    if store.get_monitoring_status():
+        return store.get_live_metrics()
     return system_metrics.get_metrics()
 
 
@@ -329,37 +333,85 @@ def simulation_start(background_tasks: BackgroundTasks):
     )
 
 
-@app.post("/monitoring/start")
-def start_monitoring():
-    global monitor_thread
-    if not MONITOR.running:
-        monitor_thread = threading.Thread(target=monitoring_task, daemon=True)
-        monitor_thread.start()
-        return {"status": "started", "message": "Continuous monitoring loop active."}
-    return {"status": "already_running"}
+
+# ── Live Monitoring Controls ────────────────────────────────────────────────
+@app.post("/monitor/start")
+def start_live_monitoring():
+    """Enable real runtime ingestion and rule detection."""
+    store.set_monitoring_status(True)
+    print("🛰️ [Sentinel] Live monitoring ENABLED. Ready for ingestion.")
+    return {"status": "monitoring_started", "mode": "LIVE"}
 
 
-@app.post("/monitoring/stop")
-def stop_monitoring():
-    if MONITOR.running:
-        MONITOR.stop()
-        return {"status": "stopped", "message": "Monitoring loop halted."}
-    return {"status": "not_running"}
+@app.post("/monitor/stop")
+def stop_live_monitoring():
+    """Disable runtime monitoring."""
+    store.set_monitoring_status(False)
+    print("🛑 [Sentinel] Live monitoring DISABLED.")
+    return {"status": "monitoring_stopped"}
 
 
-@app.get("/monitoring/status")
+@app.get("/status")
 def get_monitoring_status():
+    """Report whether monitoring is active and what's connected."""
     return {
-        "running": MONITOR.running,
-        "events_ingested": MONITOR.events_ingested,
-        "last_poll_timestamp": MONITOR.last_poll_time,
-        "sources": ["agent-runtime", "prompt-monitor", "wallet-monitor"]
+        "monitoring_active": store.get_monitoring_status(),
+        "live_events_processed": store.get_live_metrics()["eventsProcessed"],
+        "connected_sources": ["agent-runtime", "prompt-monitor", "wallet-monitor"]
     }
+
+
+@app.post("/events/ingest")
+async def ingest_runtime_event(event: RuntimeEvent):
+    """
+    Primary intake for REAL application/agent events.
+    Rules are evaluated on every ingestion.
+    """
+    if not store.get_monitoring_status():
+        # Optional: accept but don't process if monitoring is OFF, 
+        # or return an error/warning.
+        return {"status": "ignored", "reason": "Monitoring is disabled"}
+
+    # 1. Update global event count
+    store.increment_live_events()
+
+    # 2. Run rule engine evaluation
+    incident = evaluate_event(event)
+
+    if incident:
+        # 3. If a rule triggered, add to live incident list
+        store.add_live_incident(incident.dict())
+        print(f"🚨 [Detection] INCIDENT CREATED: {incident.type} for agent {event.agentId}")
+        return {"status": "incident_detected", "incident_id": incident.id}
+
+    return {"status": "processed", "incident_detected": False}
+
+
+@app.post("/simulate-attack")
+async def simulate_attack():
+    """
+    Developer tool to verify detection by injecting a malicious event.
+    """
+    attack_event = RuntimeEvent(
+        eventId=str(uuid.uuid4()),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        agentId="testing-attacker-01",
+        source="manual-simulation",
+        eventType="tool_call",
+        action="read_sensitive_file",
+        resource="/etc/passwd",
+        metadata={"riskScore": 0.95}
+    )
+    
+    # We use the same ingestion logic to prove the detection engine works
+    return await ingest_runtime_event(attack_event)
 
 
 @app.get("/incidents")
 def list_incidents():
     """Real-time list of all incidents in the current run."""
+    if store.get_monitoring_status():
+        return store.get_live_incidents()
     return store.get_all_incidents()
 
 

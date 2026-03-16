@@ -1280,25 +1280,32 @@
         }
 
         // ── Monitoring ─────────────────────────────────────────────────────────────
+                // ── Live Monitoring (Real Ingestion) ──────────────────────────────────────
         async function toggleMonitoring() {
             const btn = document.getElementById('monitor-btn');
+            const badge = document.getElementById('monitoring-badge');
             const isRunning = btn.textContent.includes('Stop');
             
             try {
-                const endpoint = isRunning ? '/monitoring/stop' : '/monitoring/start';
+                const endpoint = isRunning ? '/monitor/stop' : '/monitor/start';
                 const res = await fetch(`${API}${endpoint}`, { method: 'POST' });
                 const data = await res.json();
                 
-                if (data.status === 'started' || data.status === 'already_running') {
+                if (data.status === 'monitoring_started') {
+                    // Update UI to reflect LIVE monitoring
                     btn.textContent = '⏹ Stop Monitoring';
                     btn.className = 'btn btn-primary badge-red';
-                    document.getElementById('monitoring-badge').textContent = '📡 MONITORING: ON';
-                    document.getElementById('monitoring-badge').className = 'badge badge-green';
+                    badge.textContent = '🛰️ MONITORING: LIVE';
+                    badge.className = 'badge badge-green';
+                    
+                    // Clear demo state if it was active
+                    currentRunId = null;
+                    document.getElementById('run-id-display').textContent = 'LIVE-MODE';
                 } else {
                     btn.textContent = '📡 Start Real-Time Monitoring';
                     btn.className = 'btn btn-primary';
-                    document.getElementById('monitoring-badge').textContent = '📡 MONITORING: OFF';
-                    document.getElementById('monitoring-badge').className = 'badge';
+                    badge.textContent = '📡 MONITORING: OFF';
+                    badge.className = 'badge';
                 }
             } catch (e) {
                 console.error("Monitoring toggle error", e);
@@ -1307,21 +1314,26 @@
 
         async function updateMonitoringStatus() {
             try {
-                const res = await fetch(`${API}/monitoring/status`);
+                const res = await fetch(`${API}/status`);
                 const data = await res.json();
                 const btn = document.getElementById('monitor-btn');
                 const badge = document.getElementById('monitoring-badge');
                 
-                if (data.running) {
+                if (data.monitoring_active) {
                     btn.textContent = '⏹ Stop Monitoring';
                     btn.className = 'btn btn-primary badge-red';
-                    badge.textContent = '📡 MONITORING: ON';
+                    badge.textContent = '🛰️ MONITORING: LIVE';
                     badge.className = 'badge badge-green';
+                    if (!currentRunId) {
+                         document.getElementById('run-id-display').textContent = 'LIVE-MODE';
+                    }
                 } else {
                     btn.textContent = '📡 Start Real-Time Monitoring';
                     btn.className = 'btn btn-primary';
-                    badge.textContent = '📡 MONITORING: OFF';
-                    badge.className = 'badge';
+                    if (badge.textContent.includes('LIVE')) {
+                        badge.textContent = '📡 MONITORING: OFF';
+                        badge.className = 'badge';
+                    }
                 }
             } catch {}
         }
