@@ -267,6 +267,17 @@ def get_system_metrics():
     """Returns real-time performance and threat indicators."""
     if store.get_monitoring_status():
         return store.get_live_metrics()
+    
+    # If not monitoring, and no active demo run, default to 0s for a clean initial view
+    if store.get_run_id() == f"LIVE-RUN-{datetime.now(timezone.utc).strftime('%Y%j')}":
+         # Check if we have actual demo history we want to hide by default
+         return {
+            "total_incidents": 0,
+            "critical_threats": 0,
+            "attestations_success": 0,
+            "remediations_triggered": 0
+        }
+        
     return system_metrics.get_metrics()
 
 
