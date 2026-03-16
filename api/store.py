@@ -82,9 +82,14 @@ def get_all_incidents() -> list:
 
 
 def set_monitoring_status(active: bool) -> None:
-    global _monitoring_active
+    global _monitoring_active, _live_incidents, _live_events_processed, _critical_threats
     with _lock:
         _monitoring_active = active
+        if active:
+            # START FRESH for Live monitoring
+            _live_incidents = []
+            _live_events_processed = 0
+            _critical_threats = 0
 
 
 def get_monitoring_status() -> bool:

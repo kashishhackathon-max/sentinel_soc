@@ -1298,9 +1298,12 @@
                     badge.textContent = '🛰️ MONITORING: LIVE';
                     badge.className = 'badge badge-green';
                     
-                    // Clear demo state if it was active
+                    // CLEAR UI for fresh start
                     currentRunId = null;
+                    incidentMap = {};
+                    document.getElementById('incident-list').innerHTML = '<div class="empty-state">Waiting for real-world events…</div>';
                     document.getElementById('run-id-display').textContent = 'LIVE-MODE';
+                    resetMetrics();
                 } else {
                     btn.textContent = '📡 Start Real-Time Monitoring';
                     btn.className = 'btn btn-primary';
